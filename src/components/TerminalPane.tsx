@@ -7,6 +7,7 @@ let FitAddon: any = null;
 let WebLinksAddon: any = null;
 let xtermCssLoaded = false;
 const terminalResponsePattern = /^(?:(?:\x1b\][^\x07\x1b]*(?:\x07|\x1b\\))|(?:\x1bP[\s\S]*?\x1b\\)|(?:\x1b\[[0-9;?]*[RcnItIO]))+$/;
+const bundledSourceLeakPattern = /applicationCursorKeysMode|attachCustomKeyEventHandler|registerCharacterJoiner/;
 
 interface TerminalPaneProps {
   tab: TerminalTab;
@@ -149,6 +150,10 @@ export const TerminalPane: React.FC<TerminalPaneProps> = ({ tab, isActive, initi
     // PTY output → terminal
     const removeDataListener = window.systalog.terminal.onData(({ id, data }) => {
       if (id === tab.id) {
+        if (data.length > 400 && bundledSourceLeakPattern.test(data)) {
+          console.warn('Dropped bundled source leak from terminal stream');
+          return;
+        }
         term.write(data);
         outputRef.current?.(data);
       }

@@ -54,6 +54,16 @@ export const PROVIDERS: ProviderConfig[] = [
     setupCommand: 'openclaw',
   },
   {
+    id: 'aevolve',
+    label: 'A-Evolve',
+    icon: '🧬',
+    color: '#8b5cf6',
+    description: 'Self-improving agent workspace and evolution control',
+    authType: 'none',
+    setupCommand: 'python3.11 -m pip install -e ".[all,dev]"',
+    docUrl: 'https://github.com/A-EVO-Lab/a-evolve',
+  },
+  {
     id: 'shell',
     label: 'Shell',
     icon: '💻',
@@ -137,34 +147,6 @@ export const DEFAULT_MODELS: ModelOption[] = [
     command: 'ollama launch opencode --yes --model kimi-k2.5:cloud',
   },
   {
-    id: 'ollama-qwen3.5',
-    name: 'Qwen 3.5 (Ollama Cloud)',
-    provider: 'ollama',
-    description: 'Recommended in the live OpenCode Ollama picker',
-    command: 'ollama launch opencode --yes --model qwen3.5:cloud',
-  },
-  {
-    id: 'ollama-qwen3-coder',
-    name: 'Qwen3 Coder 480B (Cloud)',
-    provider: 'ollama',
-    description: 'Large cloud coding model from the Ollama library',
-    command: 'ollama launch opencode --yes --model qwen3-coder:480b-cloud',
-  },
-  {
-    id: 'ollama-qwen3-coder-next',
-    name: 'Qwen3 Coder Next',
-    provider: 'ollama',
-    description: 'Cloud coding variant from the Ollama library',
-    command: 'ollama launch opencode --yes --model qwen3-coder-next:cloud',
-  },
-  {
-    id: 'ollama-deepseek-v3.2',
-    name: 'DeepSeek V3.2 (Cloud)',
-    provider: 'ollama',
-    description: 'Cloud reasoning model from the Ollama library',
-    command: 'ollama launch opencode --yes --model deepseek-v3.2:cloud',
-  },
-  {
     id: 'codex-default',
     name: 'Codex (GPT-5)',
     provider: 'codex',
@@ -206,6 +188,13 @@ export const DEFAULT_MODELS: ModelOption[] = [
     provider: 'openclaw',
     description: 'Run health checks and setup diagnostics',
     command: 'openclaw doctor',
+  },
+  {
+    id: 'aevolve-lab',
+    name: 'A-Evolve Lab',
+    provider: 'aevolve',
+    description: 'Manage evolution workspaces, bootstrap the framework, and inspect the contract',
+    command: '',
   },
 ];
 

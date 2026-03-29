@@ -6,11 +6,12 @@ import { Sidebar } from './components/Sidebar';
 import { TerminalPane } from './components/TerminalPane';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { SettingsPanel } from './components/SettingsPanel';
-import { HistoryPanel, saveSessionToHistory } from './components/HistoryPanel';
+import { HistoryPanel, sanitizeTerminalTranscript, saveSessionToHistory } from './components/HistoryPanel';
 import { CaptureStudio } from './components/CaptureStudio';
 import { EditorPane } from './components/EditorPane';
 import { BrowserPane } from './components/BrowserPane';
 import { WorkspacePane } from './components/WorkspacePane';
+import { EvolutionPane } from './components/EvolutionPane';
 import type { SessionRecord } from './components/HistoryPanel';
 
 let tabCounter = 0;
@@ -78,6 +79,15 @@ export default function App() {
     window.systalog?.store.get('customLaunches').then((data) => {
       if (Array.isArray(data)) setCustomLaunches(data as CustomLaunch[]);
     }).catch(() => {});
+    window.systalog?.store.get('sessionHistory').then((data) => {
+      if (!Array.isArray(data)) return;
+      const sanitized = (data as SessionRecord[]).map((session) => ({
+        ...session,
+        outputSnippet: sanitizeTerminalTranscript(session.outputSnippet || session.fullOutput || ''),
+        fullOutput: sanitizeTerminalTranscript(session.fullOutput || session.outputSnippet || ''),
+      }));
+      window.systalog?.store.set('sessionHistory', sanitized);
+    }).catch(() => {});
     loadSavedKeys();
     refreshProviderAuth();
   }, [loadSavedKeys, refreshProviderAuth]);
@@ -91,7 +101,7 @@ export default function App() {
         terminalLogs?: Record<string, string>;
       };
       const restoredTabs = Array.isArray(snapshot.tabs)
-        ? snapshot.tabs.filter((tab) => tab.kind === 'editor' || tab.kind === 'browser' || tab.kind === 'workspace').map((tab) => ({
+        ? snapshot.tabs.filter((tab) => tab.kind === 'editor' || tab.kind === 'browser' || tab.kind === 'workspace' || tab.kind === 'evolution').map((tab) => ({
             ...tab,
             isRunning: false,
             startedAt: tab.startedAt || Date.now(),
@@ -126,8 +136,8 @@ export default function App() {
 
   useEffect(() => {
     if (!workspaceHydrated) return;
-    const timeout = window.setTimeout(() => {
-      const persistedTabs = tabs.filter((tab) => tab.kind === 'editor' || tab.kind === 'browser' || tab.kind === 'workspace').map((tab) => ({
+      const timeout = window.setTimeout(() => {
+      const persistedTabs = tabs.filter((tab) => tab.kind === 'editor' || tab.kind === 'browser' || tab.kind === 'workspace' || tab.kind === 'evolution').map((tab) => ({
         ...tab,
         isRunning: false,
       }));
@@ -216,6 +226,28 @@ export default function App() {
         setActiveTabId(id);
         return;
       }
+    }
+
+    if (model.id === 'aevolve-lab') {
+      const existing = tabs.find((tab) => tab.kind === 'evolution');
+      if (existing) {
+        setActiveTabId(existing.id);
+        return;
+      }
+
+      const id = newId();
+      setTabs((prev) => [...prev, {
+        id,
+        label: 'A-Evolve Lab',
+        icon: '🧬',
+        color: '#8b5cf6',
+        kind: 'evolution',
+        isRunning: false,
+        provider: 'aevolve',
+        startedAt: Date.now(),
+      }]);
+      setActiveTabId(id);
+      return;
     }
 
     const authSnapshot = model.provider === 'zai' || model.provider === 'ollama'
@@ -360,6 +392,27 @@ export default function App() {
       focusPath,
       isRunning: false,
       provider: 'custom',
+      startedAt: Date.now(),
+    }]);
+    setActiveTabId(id);
+  }, [tabs]);
+
+  const openEvolutionTab = useCallback(() => {
+    const existing = tabs.find((tab) => tab.kind === 'evolution');
+    if (existing) {
+      setActiveTabId(existing.id);
+      return;
+    }
+
+    const id = newId();
+    setTabs((prev) => [...prev, {
+      id,
+      label: 'A-Evolve Lab',
+      icon: '🧬',
+      color: '#8b5cf6',
+      kind: 'evolution',
+      isRunning: false,
+      provider: 'aevolve',
       startedAt: Date.now(),
     }]);
     setActiveTabId(id);
@@ -535,6 +588,15 @@ export default function App() {
                   <BrowserPane tab={tab} isActive={tab.id === activeTabId} />
                 ) : tab.kind === 'workspace' ? (
                   <WorkspacePane tab={tab} isActive={tab.id === activeTabId} onOpenFile={openFileEditor} />
+                ) : tab.kind === 'evolution' ? (
+                  <EvolutionPane
+                    tab={tab}
+                    isActive={tab.id === activeTabId}
+                    onLaunchCommand={launchCommand}
+                    onOpenBrowserTab={openBrowserTab}
+                    onOpenFileEditor={openFileEditor}
+                    onOpenWorkspace={openWorkspaceTab}
+                  />
                 ) : (
                   <TerminalPane
                     tab={tab}
@@ -576,6 +638,7 @@ export default function App() {
           onOpenFileEditor={openFileEditor}
           onOpenBrowserTab={openBrowserTab}
           onOpenWorkspace={openWorkspaceTab}
+          onOpenEvolutionLab={openEvolutionTab}
         />
       )}
 

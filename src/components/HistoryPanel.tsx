@@ -1,5 +1,19 @@
 import React, { useState, useEffect } from 'react';
 
+const terminalEscapePattern = /\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\)|P[\s\S]*?\x1b\\)/g;
+
+export function sanitizeTerminalTranscript(text: string): string {
+  return text
+    .replace(terminalEscapePattern, '')
+    .replace(/\[\??\d[\d;]*[A-Za-z]/g, '')
+    .replace(/(?:^|\n)0;[^\n]*/g, '\n')
+    .replace(/\r/g, '')
+    .replace(/\u0007/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 export interface SessionRecord {
   id: string;
   label: string;
@@ -29,7 +43,13 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({ onClose, onRelaunch 
   useEffect(() => {
     window.systalog?.store.get('sessionHistory').then((data) => {
       if (Array.isArray(data)) {
-        setSessions((data as SessionRecord[]).sort((a, b) => b.startedAt - a.startedAt));
+        const normalized = (data as SessionRecord[]).map((session) => ({
+          ...session,
+          outputSnippet: sanitizeTerminalTranscript(session.outputSnippet || session.fullOutput || ''),
+          fullOutput: sanitizeTerminalTranscript(session.fullOutput || session.outputSnippet || ''),
+        }));
+        setSessions(normalized.sort((a, b) => b.startedAt - a.startedAt));
+        window.systalog?.store.set('sessionHistory', normalized);
       }
     });
   }, []);
@@ -178,8 +198,15 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({ onClose, onRelaunch 
 export function saveSessionToHistory(record: SessionRecord) {
   window.systalog?.store.get('sessionHistory').then((data) => {
     const history = Array.isArray(data) ? (data as SessionRecord[]) : [];
+    const cleanOutput = sanitizeTerminalTranscript(record.fullOutput || record.outputSnippet || '');
+    const cleanSnippet = sanitizeTerminalTranscript(record.outputSnippet || cleanOutput).slice(0, 2000);
+    const normalizedRecord: SessionRecord = {
+      ...record,
+      outputSnippet: cleanSnippet,
+      fullOutput: cleanOutput,
+    };
     // Keep last 100 sessions
-    const updated = [record, ...history].slice(0, 100);
+    const updated = [normalizedRecord, ...history].slice(0, 100);
     window.systalog?.store.set('sessionHistory', updated);
   });
 }

@@ -10,6 +10,7 @@ interface SettingsPanelProps {
   onOpenFileEditor: (filePath: string, label?: string) => void;
   onOpenBrowserTab: (url: string, label?: string, provider?: Provider) => void;
   onOpenWorkspace: (rootPath: string, label?: string, focusPath?: string) => void;
+  onOpenEvolutionLab: () => void;
 }
 
 type PanelTab = 'hub' | 'auth' | 'skills' | 'updates';
@@ -102,6 +103,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onOpenFileEditor,
   onOpenBrowserTab,
   onOpenWorkspace,
+  onOpenEvolutionLab,
 }) => {
   const [activeTab, setActiveTab] = useState<PanelTab>('hub');
   const [zaiKey, setZaiKey] = useState('');
@@ -282,8 +284,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const curatedRadar = [
     { family: 'Claude Code', note: 'Sonnet 4.6 and Opus 4.6 are the current Anthropic anchors.' },
     { family: 'Z.AI', note: 'This hub now keeps only GLM-5 Turbo and GLM-5.1 for the coding plan.' },
-    { family: 'Ollama Cloud', note: 'The catalog now follows the current OpenCode launcher and avoids inventing unsupported GLM-5.1 or GLM-5 Turbo cloud variants.' },
+    { family: 'Ollama Cloud', note: 'The catalog now mirrors the live OpenCode + Ollama model list on this Mac instead of guessing at unsupported cloud codes.' },
     { family: 'OpenClaw', note: 'The hub now exposes setup, config, channels, and health-check entry points.' },
+    { family: 'A-Evolve', note: 'Use Evolution Lab to bootstrap the framework, inspect the workspace contract, and open evolution workspaces in-app.' },
   ];
 
   const filteredSkills = useMemo(() => {
@@ -357,6 +360,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const openWorkspaceAndClose = (rootPath: string, label?: string, focusPath?: string) => {
     onClose();
     onOpenWorkspace(rootPath, label, focusPath);
+  };
+
+  const openEvolutionLabAndClose = () => {
+    onClose();
+    onOpenEvolutionLab();
   };
 
   const saveClaudeSettings = async () => {
@@ -525,6 +533,39 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                       </div>
                     ))}
                   </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="rounded-[24px] border border-[#8b5cf6]/20 bg-[linear-gradient(135deg,rgba(139,92,246,0.18),rgba(2,6,17,0.05))] p-5">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.24em] text-[#ddd6fe] font-mono">A-Evolve</p>
+                      <h3 className="mt-2 text-lg font-bold text-white">Self-improving agent workspace</h3>
+                      <p className="mt-2 text-[11px] leading-5 text-white/50">
+                        Bootstrap the framework, inspect its filesystem contract, and keep evolution workspaces alongside the rest of your agent stack.
+                      </p>
+                    </div>
+                    <button
+                      onClick={openEvolutionLabAndClose}
+                      className="rounded-2xl border border-white/10 bg-white/[0.08] px-4 py-3 text-[11px] font-semibold text-white/80"
+                    >
+                      Open lab
+                    </button>
+                  </div>
+                </div>
+                <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-5">
+                  <p className="text-[10px] uppercase tracking-[0.24em] text-white/35 font-mono">OpenCode free models</p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {['Big Pickle', 'GPT-5 Nano', 'MiMo V2 Omni Free', 'MiMo V2 Pro Free', 'MiniMax M2.5 Free', 'Nemotron 3 Super Free'].map((model) => (
+                      <span key={model} className="rounded-full border border-white/10 bg-[#020611]/45 px-3 py-2 text-[10px] font-mono text-white/65">
+                        {model}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="mt-3 text-[11px] leading-5 text-white/40">
+                    These come from the local <span className="font-mono">opencode models --verbose</span> list on this machine, separate from your Ollama plan models.
+                  </p>
                 </div>
               </div>
 

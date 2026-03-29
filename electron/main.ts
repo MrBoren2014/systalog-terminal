@@ -279,7 +279,7 @@ function listInstalledSkills() {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function createPtyProcess(id: string, cwd?: string, envOverrides?: Record<string, string>, command?: string) {
+function createPtyProcess(id: string, cwd?: string, envOverrides?: Record<string, string>) {
   if (!pty) return null;
   if (!fullPath) fullPath = getUserPath();
   const env: Record<string, string> = {
@@ -290,8 +290,7 @@ function createPtyProcess(id: string, cwd?: string, envOverrides?: Record<string
     PATH: fullPath!,
     ...(envOverrides || {}),
   };
-  const shellArgs = command ? ['-ilc', command] : [];
-  const term = pty.spawn(getShell(), shellArgs, {
+  const term = pty.spawn(getShell(), ['-il'], {
     name: 'xterm-256color', cols: 120, rows: 30,
     cwd: cwd || os.homedir(), env,
   });
@@ -431,8 +430,16 @@ function createWindow() {
 
 // --- IPC handlers ---
 ipcMain.handle('terminal:create', (_e, { id, cwd, command, env }: { id: string; cwd?: string; command?: string; env?: Record<string, string> }) => {
-  const term = createPtyProcess(id, cwd, env, command);
-  if (term) { terminals.set(id, term); return { success: true }; }
+  const term = createPtyProcess(id, cwd, env);
+  if (term) {
+    terminals.set(id, term);
+    if (command) {
+      setTimeout(() => {
+        if (terminals.has(id)) term.write(`${command}\r`);
+      }, 250);
+    }
+    return { success: true };
+  }
   return { success: false, error: 'node-pty not available' };
 });
 ipcMain.handle('terminal:write', (_e, { id, data }: { id: string; data: string }) => { terminals.get(id)?.write(data); return { success: true }; });

@@ -1,4 +1,4 @@
-export type Provider = 'claude' | 'codex' | 'ollama' | 'zai' | 'openclaw' | 'shell' | 'custom';
+export type Provider = 'claude' | 'codex' | 'ollama' | 'zai' | 'openclaw' | 'aevolve' | 'shell' | 'custom';
 
 export interface ProviderConfig {
   id: Provider;
@@ -29,7 +29,7 @@ export interface TerminalTab {
   label: string;
   icon: string;
   color: string;
-  kind?: 'terminal' | 'editor' | 'browser' | 'workspace';
+  kind?: 'terminal' | 'editor' | 'browser' | 'workspace' | 'evolution';
   cwd?: string;
   command?: string;
   envOverrides?: Record<string, string>;

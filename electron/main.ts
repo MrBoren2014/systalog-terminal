@@ -12,7 +12,7 @@ try {
   console.error('node-pty load failed:', e);
 }
 
-const isDev = process.env.NODE_ENV !== 'production' || !app.isPackaged;
+const isDev = !app.isPackaged;
 const STORE_PATH = path.join(app.getPath('userData'), 'systalog-store.json');
 
 let mainWindow: BrowserWindow | null = null;
@@ -326,6 +326,18 @@ function createWindow() {
 
   mainWindow.once('ready-to-show', () => mainWindow?.show());
   setupContextMenu();
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    console.error('did-fail-load', { errorCode, errorDescription, validatedURL });
+  });
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    console.error('render-process-gone', details);
+  });
+  mainWindow.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+    console.log('renderer-console', { level, message, line, sourceId });
+  });
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('did-finish-load', mainWindow?.webContents.getURL());
+  });
 
   if (isDev) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173');

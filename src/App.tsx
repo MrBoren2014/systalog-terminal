@@ -167,13 +167,13 @@ export default function App() {
       setTabs((prev) => [...prev, tab]);
       setActiveTabId(id);
     } else if (providerId === 'ollama') {
-      // Ollama Cloud: install/sign in via CLI, then launch Codex through Ollama
+      // Ollama Cloud: install/sign in via CLI, then launch OpenCode through Ollama
       const tab: TerminalTab = {
         id,
         label: 'Ollama Cloud Setup',
         icon: '🦙',
         color: '#f2a33b',
-        command: 'echo "\\n\\033[1;33m=== Ollama Codex Setup ===\\033[0m\\n\\nThis app needs the Ollama CLI installed on this Mac.\\n\\n1. Download/install Ollama from https://ollama.com/download/mac\\n2. Run: ollama signin\\n3. Run: ollama launch codex --model minimax-m2.7:cloud\\n\\nChecking current install...\\n" && (ollama --version || echo "\\nOllama CLI is not installed yet.\\n")',
+        command: 'echo "\\n\\033[1;33m=== Ollama OpenCode Setup ===\\033[0m\\n\\nThis app needs both Ollama and OpenCode installed on this Mac.\\n\\n1. Download/install Ollama from https://ollama.com/download/mac\\n2. Run: ollama signin\\n3. Install OpenCode: curl -fsSL https://opencode.ai/install | bash\\n4. Run: ollama launch opencode --config\\n\\nChecking current install...\\n" && ((ollama --version && opencode --version) || echo "\\nOllama or OpenCode is not installed yet.\\n")',
         isRunning: true,
         provider: 'ollama',
         startedAt: Date.now(),

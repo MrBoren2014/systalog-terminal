@@ -103,10 +103,12 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const [zaiKey, setZaiKey] = useState('');
   const [claudeStatus, setClaudeStatus] = useState<'checking' | 'installed' | 'missing'>('checking');
   const [codexStatus, setCodexStatus] = useState<'checking' | 'installed' | 'missing'>('checking');
+  const [opencodeStatus, setOpencodeStatus] = useState<'checking' | 'installed' | 'missing'>('checking');
   const [ollamaStatus, setOllamaStatus] = useState<'checking' | 'running' | 'stopped' | 'missing'>('checking');
   const [openclawStatus, setOpenclawStatus] = useState<'checking' | 'installed' | 'missing'>('checking');
   const [claudeVersion, setClaudeVersion] = useState('');
   const [codexVersion, setCodexVersion] = useState('');
+  const [opencodeVersion, setOpencodeVersion] = useState('');
   const [ollamaVersion, setOllamaVersion] = useState('');
   const [openclawVersion, setOpenclawVersion] = useState('');
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
@@ -155,6 +157,15 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         setCodexVersion(result.stdout.trim());
       } else {
         setCodexStatus('missing');
+      }
+    });
+
+    window.systalog?.shell.exec('opencode --version 2>/dev/null').then((result) => {
+      if (result.success && result.stdout) {
+        setOpencodeStatus('installed');
+        setOpencodeVersion(result.stdout.trim());
+      } else {
+        setOpencodeStatus('missing');
       }
     });
 
@@ -267,7 +278,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const curatedRadar = [
     { family: 'Claude Code', note: 'Sonnet 4.6 and Opus 4.6 are the current Anthropic anchors.' },
     { family: 'Z.AI', note: 'This hub now keeps only GLM-5 Turbo and GLM-5.1 for the coding plan.' },
-    { family: 'Ollama Cloud', note: 'The catalog now tracks the current official Codex launch strings and avoids inventing unsupported GLM-5.1 or GLM-5 Turbo cloud variants.' },
+    { family: 'Ollama Cloud', note: 'The catalog now follows the current OpenCode launcher and avoids inventing unsupported GLM-5.1 or GLM-5 Turbo cloud variants.' },
     { family: 'OpenClaw', note: 'The hub now exposes setup, config, channels, and health-check entry points.' },
   ];
 
@@ -713,7 +724,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-[11px] font-bold text-white">Ollama Cloud</p>
-                      <p className="mt-1 text-[10px] text-white/35">Install the `ollama` CLI, run `ollama signin`, then launch Codex through `ollama launch codex`.</p>
+                      <p className="mt-1 text-[10px] text-white/35">Install `ollama` and `opencode`, run `ollama signin`, then launch OpenCode through `ollama launch opencode`.</p>
                     </div>
                     <span className={`text-[10px] font-mono px-2 py-1 rounded-full ${providerStatusClasses(providerAuth.ollama)}`}>
                       {providerStatusLabel(providerAuth.ollama)}
@@ -723,15 +734,20 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     <p className="text-[11px] text-white/70">Status</p>
                     <p className="mt-2 text-[11px] leading-5 text-white/45">
                       {ollamaStatus === 'missing'
-                        ? 'Ollama is not installed on this Mac yet. Install the CLI first, then sign in to your Pro plan.'
-                        : 'Ollama CLI is installed. Sign in once with `ollama signin`, then use the Ollama Cloud models from the sidebar through Codex.'}
+                        ? 'Ollama is not installed on this Mac yet. Install Ollama first, then OpenCode, then sign in to your Pro plan.'
+                        : opencodeStatus === 'missing'
+                          ? 'Ollama is installed, but OpenCode is missing. Install OpenCode, then run `ollama launch opencode --config` once.'
+                          : 'Ollama and OpenCode are installed. Sign in once with `ollama signin`, then use the Ollama Cloud models from the sidebar through OpenCode.'}
                     </p>
+                    <p className="mt-2 text-[10px] text-white/30 font-mono">OpenCode CLI: {opencodeStatus === 'installed' ? opencodeVersion || 'installed' : opencodeStatus}</p>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button onClick={() => window.systalog?.shell.openExternal('https://ollama.com/download/mac')} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] font-semibold text-white/65">Download Ollama</button>
+                    <button onClick={() => launchCommandAndClose('Install OpenCode', 'curl -fsSL https://opencode.ai/install | bash', 'ollama')} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] font-semibold text-white/65">Install OpenCode</button>
                     <button onClick={() => window.systalog?.shell.openExternal('https://ollama.com/cloud')} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] font-semibold text-white/65">Plan details</button>
                     <button onClick={() => launchCommandAndClose('Ollama Sign In', 'ollama signin', 'ollama')} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] font-semibold text-white/65">Run `ollama signin`</button>
-                    <button onClick={() => launchCommandAndClose('Ollama Codex', 'ollama launch codex', 'ollama')} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] font-semibold text-white/65">Launch Codex via Ollama</button>
+                    <button onClick={() => launchCommandAndClose('Ollama OpenCode Config', 'ollama launch opencode --config', 'ollama')} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] font-semibold text-white/65">Run OpenCode setup</button>
+                    <button onClick={() => launchCommandAndClose('Ollama OpenCode', 'ollama launch opencode', 'ollama')} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] font-semibold text-white/65">Launch OpenCode via Ollama</button>
                   </div>
                 </div>
               </div>

@@ -440,7 +440,7 @@ ipcMain.handle('app:getAuthState', () => {
       claudeSettingsEnv,
       loginShellEnv,
     ),
-    ollama: commandExists('ollama')
+    ollama: commandExists('ollama') && commandExists('opencode')
       ? { configured: true, source: 'cli' as const }
       : { configured: false, source: 'missing' as const },
   };

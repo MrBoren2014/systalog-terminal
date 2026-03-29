@@ -6,7 +6,7 @@ let Terminal: any = null;
 let FitAddon: any = null;
 let WebLinksAddon: any = null;
 let xtermCssLoaded = false;
-const terminalResponsePattern = /^(?:(?:\x1b\](?:10|11);[^\x07\x1b]*(?:\x07|\x1b\\))|(?:\x1b\[[0-9;?]*[RcIO]))+$/;
+const terminalResponsePattern = /^(?:(?:\x1b\][^\x07\x1b]*(?:\x07|\x1b\\))|(?:\x1bP[\s\S]*?\x1b\\)|(?:\x1b\[[0-9;?]*[RcnItIO]))+$/;
 
 interface TerminalPaneProps {
   tab: TerminalTab;

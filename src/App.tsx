@@ -9,6 +9,8 @@ import { SettingsPanel } from './components/SettingsPanel';
 import { HistoryPanel, saveSessionToHistory } from './components/HistoryPanel';
 import { CaptureStudio } from './components/CaptureStudio';
 import { EditorPane } from './components/EditorPane';
+import { BrowserPane } from './components/BrowserPane';
+import { WorkspacePane } from './components/WorkspacePane';
 import type { SessionRecord } from './components/HistoryPanel';
 
 let tabCounter = 0;
@@ -89,7 +91,7 @@ export default function App() {
         terminalLogs?: Record<string, string>;
       };
       const restoredTabs = Array.isArray(snapshot.tabs)
-        ? snapshot.tabs.filter((tab) => tab.kind === 'editor').map((tab) => ({
+        ? snapshot.tabs.filter((tab) => tab.kind === 'editor' || tab.kind === 'browser' || tab.kind === 'workspace').map((tab) => ({
             ...tab,
             isRunning: false,
             startedAt: tab.startedAt || Date.now(),
@@ -125,7 +127,7 @@ export default function App() {
   useEffect(() => {
     if (!workspaceHydrated) return;
     const timeout = window.setTimeout(() => {
-      const persistedTabs = tabs.filter((tab) => tab.kind === 'editor').map((tab) => ({
+      const persistedTabs = tabs.filter((tab) => tab.kind === 'editor' || tab.kind === 'browser' || tab.kind === 'workspace').map((tab) => ({
         ...tab,
         isRunning: false,
       }));
@@ -186,6 +188,35 @@ export default function App() {
   const launchModel = useCallback(async (model: ModelOption, cwd?: string) => {
     const launchKey = `model:${model.id}:${cwd || ''}`;
     if (shouldIgnoreDuplicateLaunch(launchKey)) return;
+
+    if (model.id === 'openclaw-dashboard') {
+      const result = await window.systalog?.shell.exec('openclaw dashboard --no-open 2>/dev/null');
+      const output = `${result?.stdout || ''}\n${result?.stderr || ''}`;
+      const match = output.match(/https?:\/\/[^\s]+/);
+      if (match?.[0]) {
+        const dashboardUrl = match[0];
+        const existing = tabs.find((tab) => tab.kind === 'browser' && tab.url === dashboardUrl);
+        if (existing) {
+          setActiveTabId(existing.id);
+          return;
+        }
+
+        const id = newId();
+        setTabs((prev) => [...prev, {
+          id,
+          label: 'OpenClaw Dashboard',
+          icon: '🦀',
+          color: '#ef4444',
+          kind: 'browser',
+          url: dashboardUrl,
+          isRunning: false,
+          provider: 'openclaw',
+          startedAt: Date.now(),
+        }]);
+        setActiveTabId(id);
+        return;
+      }
+    }
 
     const authSnapshot = model.provider === 'zai' || model.provider === 'ollama'
       ? await refreshProviderAuth()
@@ -285,10 +316,59 @@ export default function App() {
     setActiveTabId(id);
   }, [tabs]);
 
+  const openBrowserTab = useCallback((url: string, label?: string, provider: Provider = 'custom') => {
+    const existing = tabs.find((tab) => tab.kind === 'browser' && tab.url === url);
+    if (existing) {
+      setActiveTabId(existing.id);
+      return;
+    }
+
+    const providerConfig = PROVIDERS.find((item) => item.id === provider);
+    const id = newId();
+    setTabs((prev) => [...prev, {
+      id,
+      label: label || 'Browser',
+      icon: providerConfig?.icon || '🌐',
+      color: providerConfig?.color || '#38bdf8',
+      kind: 'browser',
+      url,
+      isRunning: false,
+      provider,
+      startedAt: Date.now(),
+    }]);
+    setActiveTabId(id);
+  }, [tabs]);
+
+  const openWorkspaceTab = useCallback((rootPath: string, label?: string, focusPath?: string) => {
+    const existing = tabs.find((tab) => tab.kind === 'workspace' && tab.rootPath === rootPath);
+    if (existing) {
+      setTabs((prev) => prev.map((tab) => (
+        tab.id === existing.id ? { ...tab, focusPath: focusPath || tab.focusPath } : tab
+      )));
+      setActiveTabId(existing.id);
+      return;
+    }
+
+    const id = newId();
+    setTabs((prev) => [...prev, {
+      id,
+      label: label || rootPath.split('/').pop() || 'Workspace',
+      icon: '🗂',
+      color: '#14b8a6',
+      kind: 'workspace',
+      rootPath,
+      focusPath,
+      isRunning: false,
+      provider: 'custom',
+      startedAt: Date.now(),
+    }]);
+    setActiveTabId(id);
+  }, [tabs]);
+
   const closeTab = useCallback((id: string) => {
     window.systalog?.terminal.kill({ id });
     const closingTab = tabs.find((tab) => tab.id === id);
-    if (closingTab && closingTab.kind !== 'editor') {
+    if (closingTab && (!closingTab.kind || closingTab.kind === 'terminal')) {
       const fullOutput = terminalLogs[id] || '';
       saveSessionToHistory({
         id: `${id}-${Date.now()}`,
@@ -369,6 +449,10 @@ export default function App() {
     });
   }, [activeTabId]);
 
+  const activeTab = tabs.find((tab) => tab.id === activeTabId) || null;
+  const activeWorkspacePath = activeTab?.rootPath || activeTab?.cwd || (activeTab?.filePath ? activeTab.filePath.replace(/\/[^/]+$/, '') : undefined);
+  const activeEditedPath = activeTab?.filePath || activeTab?.cwd;
+
   return (
     <div className="h-screen w-screen flex flex-col bg-sys-bg text-white font-display overflow-hidden select-none">
       {/* Title bar */}
@@ -382,6 +466,24 @@ export default function App() {
           </span>
         </div>
         <div className="flex items-center gap-1.5 no-drag">
+          {activeWorkspacePath && (
+            <button
+              onClick={() => openWorkspaceTab(activeWorkspacePath, `${activeTab?.label || 'Workspace'} Files`, activeTab?.filePath)}
+              className="px-2.5 py-1 rounded-md text-[10px] text-[#9ae6dc] hover:text-white hover:bg-white/[0.06] transition-all font-mono"
+              title="Open workspace"
+            >
+              Workspace
+            </button>
+          )}
+          {activeEditedPath && (
+            <button
+              onClick={() => openWorkspaceTab(activeWorkspacePath || activeEditedPath, 'Edited Files', activeEditedPath)}
+              className="px-2.5 py-1 rounded-md text-[10px] text-[#8ed8ff] hover:text-white hover:bg-white/[0.06] transition-all font-mono"
+              title="Open changed files"
+            >
+              Edited
+            </button>
+          )}
           <button onClick={() => setCaptureOpen(true)} className="px-2.5 py-1 rounded-md text-[10px] text-white/30 hover:text-white/70 hover:bg-white/[0.06] transition-all font-mono" title="Capture Studio">
             Capture
           </button>
@@ -429,6 +531,10 @@ export default function App() {
               <div key={tab.id} className={`absolute inset-0 ${tab.id === activeTabId ? 'z-10 visible' : 'z-0 invisible'}`}>
                 {tab.kind === 'editor' ? (
                   <EditorPane tab={tab} isActive={tab.id === activeTabId} />
+                ) : tab.kind === 'browser' ? (
+                  <BrowserPane tab={tab} isActive={tab.id === activeTabId} />
+                ) : tab.kind === 'workspace' ? (
+                  <WorkspacePane tab={tab} isActive={tab.id === activeTabId} onOpenFile={openFileEditor} />
                 ) : (
                   <TerminalPane
                     tab={tab}
@@ -468,6 +574,8 @@ export default function App() {
           onLaunchCommand={launchCommand}
           onOpenCapture={() => setCaptureOpen(true)}
           onOpenFileEditor={openFileEditor}
+          onOpenBrowserTab={openBrowserTab}
+          onOpenWorkspace={openWorkspaceTab}
         />
       )}
 

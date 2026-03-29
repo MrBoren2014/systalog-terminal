@@ -38,6 +38,7 @@ contextBridge.exposeInMainWorld('systalog', {
   filesystem: {
     readTextFile: (filePath: string) => ipcRenderer.invoke('filesystem:readTextFile', filePath),
     writeTextFile: (filePath: string, content: string) => ipcRenderer.invoke('filesystem:writeTextFile', { filePath, content }),
+    getWorkspaceSnapshot: (rootPath: string) => ipcRenderer.invoke('filesystem:getWorkspaceSnapshot', rootPath),
   },
   app: {
     getInfo: () => ipcRenderer.invoke('app:getInfo'),

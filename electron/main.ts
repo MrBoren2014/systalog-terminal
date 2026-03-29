@@ -138,6 +138,82 @@ function saveDataUrlToFile(dataUrl: string): string {
   return filePath;
 }
 
+function listWorkspaceEntries(rootPath: string, depth = 2) {
+  if (depth < 0) return [];
+  try {
+    return fs.readdirSync(rootPath, { withFileTypes: true })
+      .filter((entry) => !entry.name.startsWith('.'))
+      .sort((a, b) => {
+        if (a.isDirectory() && !b.isDirectory()) return -1;
+        if (!a.isDirectory() && b.isDirectory()) return 1;
+        return a.name.localeCompare(b.name);
+      })
+      .slice(0, 80)
+      .map((entry) => {
+        const fullPath = path.join(rootPath, entry.name);
+        if (entry.isDirectory()) {
+          return {
+            path: fullPath,
+            name: entry.name,
+            kind: 'directory' as const,
+            children: depth > 0 ? listWorkspaceEntries(fullPath, depth - 1) : [],
+          };
+        }
+        return {
+          path: fullPath,
+          name: entry.name,
+          kind: 'file' as const,
+        };
+      });
+  } catch {
+    return [];
+  }
+}
+
+function getWorkspaceSnapshot(targetPath: string) {
+  const normalizedPath = hasValue(targetPath) ? path.resolve(targetPath) : os.homedir();
+  const resolvedRoot = fs.existsSync(normalizedPath) && fs.statSync(normalizedPath).isDirectory()
+    ? normalizedPath
+    : path.dirname(normalizedPath);
+
+  let gitRoot: string | undefined;
+  let changedFiles: Array<{ path: string; status: string }> = [];
+
+  try {
+    gitRoot = execSync(`git -C ${JSON.stringify(resolvedRoot)} rev-parse --show-toplevel`, {
+      encoding: 'utf-8',
+      timeout: 5000,
+      env: { ...process.env, PATH: fullPath || getUserPath() },
+    }).trim();
+
+    const statusOutput = execSync(`git -C ${JSON.stringify(resolvedRoot)} status --short --untracked-files=all`, {
+      encoding: 'utf-8',
+      timeout: 5000,
+      env: { ...process.env, PATH: fullPath || getUserPath() },
+    });
+
+    changedFiles = statusOutput
+      .split(/\r?\n/)
+      .map((line) => line.trimEnd())
+      .filter(Boolean)
+      .map((line) => {
+        const status = line.slice(0, 2).trim() || '??';
+        const relativePath = line.slice(3).trim().replace(/^"|"$/g, '');
+        return {
+          status,
+          path: gitRoot ? path.join(gitRoot, relativePath) : path.join(resolvedRoot, relativePath),
+        };
+      });
+  } catch {}
+
+  return {
+    rootPath: resolvedRoot,
+    entries: listWorkspaceEntries(resolvedRoot, 2),
+    gitRoot,
+    changedFiles,
+  };
+}
+
 function parseSkillMeta(skillPath: string, source: 'codex' | 'agents') {
   const content = fs.readFileSync(skillPath, 'utf-8');
   const lines = content.split(/\r?\n/);
@@ -419,6 +495,13 @@ ipcMain.handle('filesystem:writeTextFile', (_e, { filePath, content }: { filePat
   try {
     fs.writeFileSync(filePath, content, 'utf-8');
     return { success: true };
+  } catch (err) {
+    return { success: false, error: String(err) };
+  }
+});
+ipcMain.handle('filesystem:getWorkspaceSnapshot', (_e, rootPath: string) => {
+  try {
+    return { success: true, snapshot: getWorkspaceSnapshot(rootPath) };
   } catch (err) {
     return { success: false, error: String(err) };
   }

@@ -6,24 +6,21 @@ SYSTALOG Terminal is a standalone Electron app for managing AI coding sessions, 
 
 - Launches Claude Code, Codex, Z.AI, Ollama Cloud, OpenClaw, and shell sessions from one UI.
 - Provides in-app editors for skills and config files.
+- Embeds local dashboards like OpenClaw directly inside the app.
+- Includes a workspace browser so you can inspect changed files and jump into editors quickly.
 - Captures screenshots, crops them, copies them, and saves them locally.
 - Detects machine-specific setup at runtime instead of baking personal settings into the app.
 
-## Privacy and machine-specific behavior
-
-- No API keys are bundled with the app.
-- No local user home paths are hardcoded into the distributable.
-- Per-user settings are stored in the app user-data directory created by Electron on each machine.
-- Local paths such as `~/.claude`, `~/.codex`, `~/.openclaw`, and `~/Pictures/SYSTALOG` are resolved dynamically on the user’s computer.
-
-## Development
+## Clone and run
 
 ```bash
+git clone https://github.com/MrBoren2014/systalog-terminal.git
+cd systalog-terminal
 npm install
 npm run electron:dev
 ```
 
-## Build
+## Packaged build
 
 ```bash
 npm run build
@@ -31,7 +28,48 @@ npm run build
 
 The packaged macOS artifacts are written to `dist/`.
 
+## Provider setup
+
+### Claude Code
+
+- Install the Claude CLI
+- Sign in through the CLI once
+
+### Z.AI / GLM
+
+- Get a key from [z.ai/subscribe](https://z.ai/subscribe)
+- Save it in the app settings or configure Claude Code for Z.AI directly
+
+### Ollama Cloud + OpenCode
+
+- Install Ollama from [ollama.com/download/mac](https://ollama.com/download/mac)
+- Run `ollama signin`
+- Install OpenCode:
+
+```bash
+curl -fsSL https://opencode.ai/install | bash
+```
+
+- Run first-time setup once:
+
+```bash
+ollama launch opencode --config
+```
+
+- After that, launch Ollama Cloud models from the SYSTALOG sidebar
+
+### OpenClaw
+
+- Install and configure OpenClaw on the machine
+- Use the built-in dashboard/config/channel actions in SYSTALOG
+
+## How the app stays machine-safe
+
+- No API keys are bundled with the app.
+- No local user home paths are hardcoded into the distributable.
+- Per-user settings are stored in the Electron user-data directory on each machine.
+- Local paths such as `~/.claude`, `~/.codex`, `~/.openclaw`, and `~/Pictures/SYSTALOG` are resolved dynamically.
+
 ## Distribution note
 
 This project can be packaged locally, but public macOS distribution still requires Apple code signing and notarization before frictionless download/install for other users.
-

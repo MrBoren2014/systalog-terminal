@@ -8,6 +8,8 @@ interface SettingsPanelProps {
   onLaunchCommand: (label: string, command: string, provider?: Provider) => void;
   onOpenCapture: () => void;
   onOpenFileEditor: (filePath: string, label?: string) => void;
+  onOpenBrowserTab: (url: string, label?: string, provider?: Provider) => void;
+  onOpenWorkspace: (rootPath: string, label?: string, focusPath?: string) => void;
 }
 
 type PanelTab = 'hub' | 'auth' | 'skills' | 'updates';
@@ -44,7 +46,7 @@ function providerStatusLabel(status: ProviderSetupStatus): string {
     case 'shell-env':
       return 'configured in shell';
     case 'cli':
-      return 'ollama cli detected';
+      return 'cli stack detected';
     case 'checking':
       return 'checking...';
     default:
@@ -98,6 +100,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onLaunchCommand,
   onOpenCapture,
   onOpenFileEditor,
+  onOpenBrowserTab,
+  onOpenWorkspace,
 }) => {
   const [activeTab, setActiveTab] = useState<PanelTab>('hub');
   const [zaiKey, setZaiKey] = useState('');
@@ -325,6 +329,18 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
   const launchOpenClaw = (label: string, command: string) => {
     onClose();
+    if (command === 'openclaw dashboard') {
+      window.systalog?.shell.exec('openclaw dashboard --no-open 2>/dev/null').then((result) => {
+        const output = `${result?.stdout || ''}\n${result?.stderr || ''}`;
+        const match = output.match(/https?:\/\/[^\s]+/);
+        if (match?.[0]) {
+          onOpenBrowserTab(match[0], 'OpenClaw Dashboard', 'openclaw');
+          return;
+        }
+        onLaunchCommand(label, command, 'openclaw');
+      });
+      return;
+    }
     onLaunchCommand(label, command, 'openclaw');
   };
 
@@ -336,6 +352,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const openFileEditorAndClose = (filePath: string, label?: string) => {
     onClose();
     onOpenFileEditor(filePath, label);
+  };
+
+  const openWorkspaceAndClose = (rootPath: string, label?: string, focusPath?: string) => {
+    onClose();
+    onOpenWorkspace(rootPath, label, focusPath);
   };
 
   const saveClaudeSettings = async () => {
@@ -460,6 +481,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     <span className={`text-[10px] px-3 py-1 rounded-full ${providerStatusClasses(providerAuth.ollama)}`}>Ollama: {providerStatusLabel(providerAuth.ollama)}</span>
                     <span className="text-[10px] px-3 py-1 rounded-full bg-white/[0.06] text-white/70">Claude: {claudeStatus === 'installed' ? claudeVersion || 'installed' : 'missing'}</span>
                     <span className="text-[10px] px-3 py-1 rounded-full bg-white/[0.06] text-white/70">Codex: {codexStatus === 'installed' ? codexVersion || 'installed' : 'missing'}</span>
+                    <span className="text-[10px] px-3 py-1 rounded-full bg-white/[0.06] text-white/70">OpenCode: {opencodeStatus === 'installed' ? opencodeVersion || 'installed' : 'missing'}</span>
                   </div>
                 </div>
               </div>
@@ -518,6 +540,13 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     className="rounded-2xl border border-[#38bdf8]/15 bg-[#38bdf8]/10 px-4 py-3 text-[11px] font-semibold text-[#bdeafe]"
                   >
                     Open default config editor
+                  </button>
+                  <button
+                    onClick={() => appInfo?.homedir && openWorkspaceAndClose(appInfo.homedir, 'Home Workspace')}
+                    disabled={!appInfo?.homedir}
+                    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-[11px] font-semibold text-white/70"
+                  >
+                    Open workspace
                   </button>
                 </div>
                 <div className="mt-5 grid grid-cols-3 gap-4">

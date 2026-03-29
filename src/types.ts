@@ -29,7 +29,7 @@ export interface TerminalTab {
   label: string;
   icon: string;
   color: string;
-  kind?: 'terminal' | 'editor';
+  kind?: 'terminal' | 'editor' | 'browser' | 'workspace';
   cwd?: string;
   command?: string;
   envOverrides?: Record<string, string>;
@@ -37,6 +37,9 @@ export interface TerminalTab {
   provider: Provider;
   model?: string;
   filePath?: string;
+  url?: string;
+  rootPath?: string;
+  focusPath?: string;
   startedAt?: number;
 }
 
@@ -87,6 +90,25 @@ export interface SkillInfo {
   source: 'codex' | 'agents';
 }
 
+export interface WorkspaceEntry {
+  path: string;
+  name: string;
+  kind: 'file' | 'directory';
+  children?: WorkspaceEntry[];
+}
+
+export interface WorkspaceChange {
+  path: string;
+  status: string;
+}
+
+export interface WorkspaceSnapshot {
+  rootPath: string;
+  entries: WorkspaceEntry[];
+  gitRoot?: string;
+  changedFiles: WorkspaceChange[];
+}
+
 export interface AppInfo {
   homedir: string;
   platform: string;
@@ -123,6 +145,7 @@ declare global {
       filesystem: {
         readTextFile: (filePath: string) => Promise<{ success: boolean; content?: string; error?: string }>;
         writeTextFile: (filePath: string, content: string) => Promise<{ success: boolean; error?: string }>;
+        getWorkspaceSnapshot: (rootPath: string) => Promise<{ success: boolean; snapshot?: WorkspaceSnapshot; error?: string }>;
       };
       app: {
         getInfo: () => Promise<AppInfo>;

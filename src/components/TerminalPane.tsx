@@ -6,17 +6,26 @@ let Terminal: any = null;
 let FitAddon: any = null;
 let WebLinksAddon: any = null;
 let xtermCssLoaded = false;
+const terminalResponsePattern = /^(?:(?:\x1b\](?:10|11);[^\x07\x1b]*(?:\x07|\x1b\\))|(?:\x1b\[[0-9;?]*[RcIO]))+$/;
 
 interface TerminalPaneProps {
   tab: TerminalTab;
   isActive: boolean;
+  initialOutput?: string;
+  onOutput?: (data: string) => void;
 }
 
-export const TerminalPane: React.FC<TerminalPaneProps> = ({ tab, isActive }) => {
+export const TerminalPane: React.FC<TerminalPaneProps> = ({ tab, isActive, initialOutput, onOutput }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<InstanceType<typeof import('xterm').Terminal> | null>(null);
   const fitAddonRef = useRef<InstanceType<typeof import('xterm-addon-fit').FitAddon> | null>(null);
   const initialized = useRef(false);
+  const outputRef = useRef(onOutput);
+  const initialOutputRef = useRef(initialOutput);
+
+  useEffect(() => {
+    outputRef.current = onOutput;
+  }, [onOutput]);
 
   const initTerminal = useCallback(async () => {
     if (initialized.current || !containerRef.current) return;
@@ -89,6 +98,10 @@ export const TerminalPane: React.FC<TerminalPaneProps> = ({ tab, isActive }) => 
     term.open(containerRef.current);
     fitAddon.fit();
 
+    if (initialOutputRef.current) {
+      term.write(initialOutputRef.current);
+    }
+
     termRef.current = term;
     fitAddonRef.current = fitAddon;
 
@@ -108,6 +121,9 @@ export const TerminalPane: React.FC<TerminalPaneProps> = ({ tab, isActive }) => 
 
     // Terminal input → PTY
     term.onData((data: string) => {
+      // Codex/Ollama emit terminal capability probes that xterm answers automatically.
+      // Forwarding those raw responses back into the PTY causes visible garbage and loops.
+      if (terminalResponsePattern.test(data)) return;
       window.systalog.terminal.write({ id: tab.id, data });
     });
 
@@ -134,13 +150,16 @@ export const TerminalPane: React.FC<TerminalPaneProps> = ({ tab, isActive }) => 
     const removeDataListener = window.systalog.terminal.onData(({ id, data }) => {
       if (id === tab.id) {
         term.write(data);
+        outputRef.current?.(data);
       }
     });
 
     // PTY exit
     const removeExitListener = window.systalog.terminal.onExit(({ id, exitCode }) => {
       if (id === tab.id) {
-        term.write(`\r\n\x1b[90m[Process exited with code ${exitCode}]\x1b[0m\r\n`);
+        const exitLine = `\r\n\x1b[90m[Process exited with code ${exitCode}]\x1b[0m\r\n`;
+        term.write(exitLine);
+        outputRef.current?.(exitLine);
       }
     });
 

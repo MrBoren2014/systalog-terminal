@@ -5,6 +5,9 @@ export interface SessionRecord {
   label: string;
   provider: string;
   model?: string;
+  command?: string;
+  cwd?: string;
+  envOverrides?: Record<string, string>;
   icon: string;
   color: string;
   startedAt: number;

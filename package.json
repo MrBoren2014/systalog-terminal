@@ -4,6 +4,14 @@
   "description": "SYSTALOG Terminal — AI Agent Command Center",
   "author": "SYSTALOG contributors",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MrBoren2014/systalog-terminal.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MrBoren2014/systalog-terminal/issues"
+  },
+  "homepage": "https://github.com/MrBoren2014/systalog-terminal#readme",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",

@@ -37,6 +37,7 @@ export interface TerminalTab {
   provider: Provider;
   model?: string;
   filePath?: string;
+  startedAt?: number;
 }
 
 export interface SavedSession {

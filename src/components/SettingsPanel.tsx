@@ -267,7 +267,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const curatedRadar = [
     { family: 'Claude Code', note: 'Sonnet 4.6 and Opus 4.6 are the current Anthropic anchors.' },
     { family: 'Z.AI', note: 'This hub now keeps only GLM-5 Turbo and GLM-5.1 for the coding plan.' },
-    { family: 'Ollama Cloud', note: 'No official Ollama evidence was found for glm-5.1:cloud or glm-5-turbo:cloud, so they are not being faked in the catalog.' },
+    { family: 'Ollama Cloud', note: 'The catalog now tracks the current official Codex launch strings and avoids inventing unsupported GLM-5.1 or GLM-5 Turbo cloud variants.' },
     { family: 'OpenClaw', note: 'The hub now exposes setup, config, channels, and health-check entry points.' },
   ];
 
@@ -713,7 +713,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-[11px] font-bold text-white">Ollama Cloud</p>
-                      <p className="mt-1 text-[10px] text-white/35">Install the `ollama` CLI, run `ollama signin`, then launch Claude through `ollama launch claude`.</p>
+                      <p className="mt-1 text-[10px] text-white/35">Install the `ollama` CLI, run `ollama signin`, then launch Codex through `ollama launch codex`.</p>
                     </div>
                     <span className={`text-[10px] font-mono px-2 py-1 rounded-full ${providerStatusClasses(providerAuth.ollama)}`}>
                       {providerStatusLabel(providerAuth.ollama)}
@@ -724,14 +724,14 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     <p className="mt-2 text-[11px] leading-5 text-white/45">
                       {ollamaStatus === 'missing'
                         ? 'Ollama is not installed on this Mac yet. Install the CLI first, then sign in to your Pro plan.'
-                        : 'Ollama CLI is installed. Sign in once with `ollama signin`, then use the Ollama Cloud models from the sidebar.'}
+                        : 'Ollama CLI is installed. Sign in once with `ollama signin`, then use the Ollama Cloud models from the sidebar through Codex.'}
                     </p>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button onClick={() => window.systalog?.shell.openExternal('https://ollama.com/download/mac')} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] font-semibold text-white/65">Download Ollama</button>
                     <button onClick={() => window.systalog?.shell.openExternal('https://ollama.com/cloud')} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] font-semibold text-white/65">Plan details</button>
                     <button onClick={() => launchCommandAndClose('Ollama Sign In', 'ollama signin', 'ollama')} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] font-semibold text-white/65">Run `ollama signin`</button>
-                    <button onClick={() => launchCommandAndClose('Ollama Claude', 'ollama launch claude', 'ollama')} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] font-semibold text-white/65">Launch Claude via Ollama</button>
+                    <button onClick={() => launchCommandAndClose('Ollama Codex', 'ollama launch codex', 'ollama')} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] font-semibold text-white/65">Launch Codex via Ollama</button>
                   </div>
                 </div>
               </div>

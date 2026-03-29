@@ -6,13 +6,14 @@ import { Sidebar } from './components/Sidebar';
 import { TerminalPane } from './components/TerminalPane';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { SettingsPanel } from './components/SettingsPanel';
-import { HistoryPanel } from './components/HistoryPanel';
+import { HistoryPanel, saveSessionToHistory } from './components/HistoryPanel';
 import { CaptureStudio } from './components/CaptureStudio';
 import { EditorPane } from './components/EditorPane';
 import type { SessionRecord } from './components/HistoryPanel';
 
 let tabCounter = 0;
 function newId() { return `tab-${Date.now()}-${++tabCounter}`; }
+const WORKSPACE_SESSION_KEY = 'workspaceSession';
 const DEFAULT_PROVIDER_AUTH: ProviderAuthSnapshot = {
   zai: { configured: false, source: 'checking' },
   ollama: { configured: false, source: 'checking' },
@@ -29,6 +30,8 @@ export default function App() {
   const [customLaunches, setCustomLaunches] = useState<CustomLaunch[]>([]);
   const [savedKeys, setSavedKeys] = useState<{ zaiKey?: string }>({});
   const [providerAuth, setProviderAuth] = useState<ProviderAuthSnapshot>(DEFAULT_PROVIDER_AUTH);
+  const [terminalLogs, setTerminalLogs] = useState<Record<string, string>>({});
+  const [workspaceHydrated, setWorkspaceHydrated] = useState(false);
   const lastLaunchRef = useRef<{ key: string; at: number } | null>(null);
 
   const shouldIgnoreDuplicateLaunch = useCallback((key: string) => {
@@ -77,12 +80,64 @@ export default function App() {
     refreshProviderAuth();
   }, [loadSavedKeys, refreshProviderAuth]);
 
+  useEffect(() => {
+    window.systalog?.store.get(WORKSPACE_SESSION_KEY).then((data) => {
+      if (!data || typeof data !== 'object') return;
+      const snapshot = data as {
+        tabs?: TerminalTab[];
+        activeTabId?: string | null;
+        terminalLogs?: Record<string, string>;
+      };
+      const restoredTabs = Array.isArray(snapshot.tabs)
+        ? snapshot.tabs.filter((tab) => tab.kind === 'editor').map((tab) => ({
+            ...tab,
+            isRunning: false,
+            startedAt: tab.startedAt || Date.now(),
+          }))
+        : [];
+
+      if (restoredTabs.length > 0) {
+        setTabs(restoredTabs);
+        setActiveTabId(
+          snapshot.activeTabId && restoredTabs.some((tab) => tab.id === snapshot.activeTabId)
+            ? snapshot.activeTabId
+            : restoredTabs[0].id,
+        );
+      }
+
+      if (snapshot.terminalLogs && typeof snapshot.terminalLogs === 'object') {
+        setTerminalLogs(snapshot.terminalLogs);
+      }
+    }).catch(() => {
+      // ignore
+    }).finally(() => {
+      setWorkspaceHydrated(true);
+    });
+  }, []);
+
   // Save custom launches when they change
   useEffect(() => {
     if (customLaunches.length > 0) {
       window.systalog?.store.set('customLaunches', customLaunches);
     }
   }, [customLaunches]);
+
+  useEffect(() => {
+    if (!workspaceHydrated) return;
+    const timeout = window.setTimeout(() => {
+      const persistedTabs = tabs.filter((tab) => tab.kind === 'editor').map((tab) => ({
+        ...tab,
+        isRunning: false,
+      }));
+      window.systalog?.store.set(WORKSPACE_SESSION_KEY, {
+        tabs: persistedTabs,
+        activeTabId: persistedTabs.some((tab) => tab.id === activeTabId) ? activeTabId : null,
+        terminalLogs: {},
+      });
+    }, 250);
+
+    return () => window.clearTimeout(timeout);
+  }, [activeTabId, tabs, terminalLogs, workspaceHydrated]);
 
   // Check if a provider needs first-time setup
   const needsSetup = useCallback((providerId: Provider, authSnapshot: ProviderAuthSnapshot): boolean => {
@@ -107,19 +162,21 @@ export default function App() {
         command: 'echo "\\n\\033[1;33m=== Z.AI GLM Coding Plan Setup ===\\033[0m\\n\\nThis will configure Claude Code to use Z.AI models.\\nYou need a Z.AI API key from https://z.ai/subscribe\\n\\nStarting setup wizard...\\n" && npx @z_ai/coding-helper',
         isRunning: true,
         provider: 'zai',
+        startedAt: Date.now(),
       };
       setTabs((prev) => [...prev, tab]);
       setActiveTabId(id);
     } else if (providerId === 'ollama') {
-      // Ollama Cloud: install/sign in via CLI, then launch Claude through Ollama
+      // Ollama Cloud: install/sign in via CLI, then launch Codex through Ollama
       const tab: TerminalTab = {
         id,
         label: 'Ollama Cloud Setup',
         icon: '🦙',
         color: '#f2a33b',
-        command: 'echo "\\n\\033[1;33m=== Ollama Claude Setup ===\\033[0m\\n\\nThis app needs the Ollama CLI installed on this Mac.\\n\\n1. Download/install Ollama from https://ollama.com/download/mac\\n2. Run: ollama signin\\n3. Run: ollama launch claude --model minimax-m2.7:cloud\\n\\nChecking current install...\\n" && (ollama --version || echo "\\nOllama CLI is not installed yet.\\n")',
+        command: 'echo "\\n\\033[1;33m=== Ollama Codex Setup ===\\033[0m\\n\\nThis app needs the Ollama CLI installed on this Mac.\\n\\n1. Download/install Ollama from https://ollama.com/download/mac\\n2. Run: ollama signin\\n3. Run: ollama launch codex --model minimax-m2.7:cloud\\n\\nChecking current install...\\n" && (ollama --version || echo "\\nOllama CLI is not installed yet.\\n")',
         isRunning: true,
         provider: 'ollama',
+        startedAt: Date.now(),
       };
       setTabs((prev) => [...prev, tab]);
       setActiveTabId(id);
@@ -159,6 +216,7 @@ export default function App() {
       isRunning: true,
       provider: model.provider,
       model: model.id,
+      startedAt: Date.now(),
     };
     setTabs((prev) => [...prev, tab]);
     setActiveTabId(id);
@@ -171,7 +229,7 @@ export default function App() {
     const id = newId();
     setTabs((prev) => [...prev, {
       id, label: 'Shell', icon: '💻', color: '#7c3aed',
-      cwd, isRunning: true, provider: 'shell',
+      cwd, isRunning: true, provider: 'shell', startedAt: Date.now(),
     }]);
     setActiveTabId(id);
   }, [shouldIgnoreDuplicateLaunch]);
@@ -184,7 +242,7 @@ export default function App() {
     setTabs((prev) => [...prev, {
       id, label: item.label, icon: item.icon, color: item.color,
       cwd: item.cwd, command: item.command, envOverrides: item.envOverrides,
-      isRunning: true, provider: item.provider,
+      isRunning: true, provider: item.provider, startedAt: Date.now(),
     }]);
     setActiveTabId(id);
   }, [shouldIgnoreDuplicateLaunch]);
@@ -200,6 +258,7 @@ export default function App() {
       command,
       isRunning: true,
       provider,
+      startedAt: Date.now(),
     }]);
     setActiveTabId(id);
   }, []);
@@ -221,18 +280,44 @@ export default function App() {
       filePath,
       isRunning: false,
       provider: 'custom',
+      startedAt: Date.now(),
     }]);
     setActiveTabId(id);
   }, [tabs]);
 
   const closeTab = useCallback((id: string) => {
     window.systalog?.terminal.kill({ id });
+    const closingTab = tabs.find((tab) => tab.id === id);
+    if (closingTab && closingTab.kind !== 'editor') {
+      const fullOutput = terminalLogs[id] || '';
+      saveSessionToHistory({
+        id: `${id}-${Date.now()}`,
+        label: closingTab.label,
+        provider: closingTab.provider,
+        model: closingTab.model,
+        command: closingTab.command,
+        cwd: closingTab.cwd,
+        envOverrides: closingTab.envOverrides,
+        icon: closingTab.icon,
+        color: closingTab.color,
+        startedAt: closingTab.startedAt || Date.now(),
+        endedAt: Date.now(),
+        outputSnippet: fullOutput.slice(-2000),
+        fullOutput,
+      });
+    }
+
+    setTerminalLogs((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
     setTabs((prev) => {
       const next = prev.filter((t) => t.id !== id);
       if (activeTabId === id) setActiveTabId(next.length > 0 ? next[next.length - 1].id : null);
       return next;
     });
-  }, [activeTabId]);
+  }, [activeTabId, tabs, terminalLogs]);
 
   const renameTab = useCallback((id: string, label: string) => {
     setTabs((prev) => prev.map((t) => (t.id === id ? { ...t, label } : t)));
@@ -248,6 +333,32 @@ export default function App() {
       window.systalog?.store.set('customLaunches', next);
       return next;
     });
+  }, []);
+
+  const appendTerminalOutput = useCallback((id: string, data: string) => {
+    setTerminalLogs((prev) => {
+      const nextValue = `${prev[id] || ''}${data}`.slice(-120000);
+      return { ...prev, [id]: nextValue };
+    });
+  }, []);
+
+  const relaunchSavedSession = useCallback((record: SessionRecord) => {
+    const id = newId();
+    setTabs((prev) => [...prev, {
+      id,
+      label: record.label,
+      icon: record.icon,
+      color: record.color,
+      cwd: record.cwd,
+      command: record.command,
+      envOverrides: record.envOverrides,
+      isRunning: true,
+      provider: record.provider as Provider,
+      model: record.model,
+      startedAt: Date.now(),
+    }]);
+    setTerminalLogs((prev) => ({ ...prev, [id]: record.fullOutput || record.outputSnippet || '' }));
+    setActiveTabId(id);
   }, []);
 
   const handleInsertCapturePath = useCallback((filePath: string) => {
@@ -319,7 +430,12 @@ export default function App() {
                 {tab.kind === 'editor' ? (
                   <EditorPane tab={tab} isActive={tab.id === activeTabId} />
                 ) : (
-                  <TerminalPane tab={tab} isActive={tab.id === activeTabId} />
+                  <TerminalPane
+                    tab={tab}
+                    isActive={tab.id === activeTabId}
+                    initialOutput={terminalLogs[tab.id]}
+                    onOutput={(data) => appendTerminalOutput(tab.id, data)}
+                  />
                 )}
               </div>
             ))
@@ -367,14 +483,7 @@ export default function App() {
         <HistoryPanel
           onClose={() => setHistoryOpen(false)}
           onRelaunch={(record: SessionRecord) => {
-            // Find the matching model and relaunch it
-            const model = DEFAULT_MODELS.find((m) => m.id === record.model);
-            if (model) {
-              launchModel(model);
-            } else {
-              // Fallback to shell with the same label
-              launchShell();
-            }
+            relaunchSavedSession(record);
             setHistoryOpen(false);
           }}
         />

@@ -62,7 +62,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ providers, models,
           })}
 
           <button
-            onClick={onLaunchShell}
+            onClick={() => onLaunchShell()}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.06] hover:border-white/[0.12] transition-all active:scale-[0.98] group text-left"
           >
             <div className="w-9 h-9 rounded-xl flex items-center justify-center text-base bg-[#7c3aed]/10 border border-[#7c3aed]/20 shrink-0">

@@ -87,7 +87,7 @@ export const TabBar: React.FC<TabBarProps> = ({ tabs, activeTabId, onSelect, onC
 
       {/* New tab button */}
       <button
-        onClick={onNewTab}
+        onClick={() => onNewTab()}
         className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-white/30 hover:text-white/60 hover:bg-white/[0.06] transition-all ml-1 mr-2"
         title="New tab (⌘T)"
       >

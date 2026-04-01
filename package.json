@@ -18,14 +18,15 @@
     "build": "tsc && vite build && electron-builder",
     "preview": "vite preview",
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:build": "vite build && electron-builder --mac"
+    "electron:build": "vite build && electron-builder --mac",
+    "test:smoke": "node scripts/smoke-test.mjs"
   },
   "dependencies": {
     "node-pty": "^1.0.0",
     "xterm": "^5.3.0",
     "xterm-addon-fit": "^0.8.0",
-    "xterm-addon-web-links": "^0.9.0",
-    "xterm-addon-unicode11": "^0.6.0"
+    "xterm-addon-unicode11": "^0.6.0",
+    "xterm-addon-web-links": "^0.9.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
@@ -35,6 +36,7 @@
     "concurrently": "^9.1.0",
     "electron": "^33.0.0",
     "electron-builder": "^25.1.0",
+    "playwright": "^1.59.1",
     "postcss": "^8.4.49",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -52,7 +54,9 @@
     "mac": {
       "category": "public.app-category.developer-tools",
       "icon": "resources/icon.icns",
-      "target": ["dmg"]
+      "target": [
+        "dmg"
+      ]
     },
     "artifactName": "${productName}-${version}-${arch}.${ext}",
     "files": [

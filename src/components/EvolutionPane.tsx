@@ -30,13 +30,22 @@ const ALGORITHMS = [
   ['adaptive_skill', 'LLM-driven workspace mutation with bash access'],
   ['skillforge', 'EGL-gated workspace mutation for skill evolution'],
   ['guided_synth', 'Memory-first synthesis with guided interventions'],
+  ['meta_harness', 'New MCP/meta-harness evaluation and mutation flow'],
 ] as const;
 
 const BENCHMARKS = [
   ['swe-verified', 'GitHub issue solving on real repos'],
   ['mcp-atlas', 'Tool-calling across MCP servers'],
-  ['terminal-bench', 'Terminal and CLI reliability'],
+  ['terminal-bench 2.0', 'Terminal and CLI reliability'],
   ['skill-bench', 'Skill discovery and task routing'],
+] as const;
+
+const SEED_WORKSPACES = [
+  ['swe', 'Reference SWE workspace and toolchain'],
+  ['mcp', 'Base MCP-Atlas workspace'],
+  ['mcp_mh', 'Meta-harness seed for MCP evolution'],
+  ['terminal', 'Terminal-Bench seed workspace'],
+  ['skillbench', 'SkillsBench-ready seed workspace'],
 ] as const;
 
 export const EvolutionPane: React.FC<EvolutionPaneProps> = ({
@@ -54,6 +63,7 @@ export const EvolutionPane: React.FC<EvolutionPaneProps> = ({
     { label: 'uv', value: 'checking', ok: false },
     { label: 'git', value: 'checking', ok: false },
     { label: 'repo', value: 'checking', ok: false },
+    { label: 'upstream', value: 'checking', ok: false },
   ]);
 
   useEffect(() => {
@@ -77,7 +87,8 @@ export const EvolutionPane: React.FC<EvolutionPaneProps> = ({
       ['python3.11', 'python3.11 --version 2>/dev/null'],
       ['uv', 'uv --version 2>/dev/null'],
       ['git', 'git --version 2>/dev/null'],
-      ['repo', `[ -d ${JSON.stringify(recommendedPaths.repo)} ] && echo installed || echo missing`],
+      ['repo', `[ -d ${JSON.stringify(`${recommendedPaths.repo}/.git`)} ] && git -C ${JSON.stringify(recommendedPaths.repo)} rev-parse --short HEAD || echo missing`],
+      ['upstream', 'git ls-remote https://github.com/A-EVO-Lab/a-evolve.git HEAD 2>/dev/null | cut -c1-7'],
     ];
 
     Promise.all(checks.map(async ([label, command]) => {
@@ -105,7 +116,9 @@ export const EvolutionPane: React.FC<EvolutionPaneProps> = ({
     `cd ${JSON.stringify(`${appInfo?.homedir || '~'}/Developer`)}`,
     `[ -d a-evolve/.git ] || git clone https://github.com/A-EVO-Lab/a-evolve.git`,
     'cd a-evolve',
-    'if command -v python3.11 >/dev/null 2>&1; then PYTHON_BIN=python3.11; else PYTHON_BIN=python3; fi',
+    'git fetch --all --tags',
+    'git pull --ff-only',
+    'if command -v python3.11 >/dev/null 2>&1; then PYTHON_BIN=python3.11; else echo "Python 3.11+ is required. Install it first, then rerun bootstrap." && exit 1; fi',
     '$PYTHON_BIN -m venv .venv',
     'source .venv/bin/activate',
     'python -m pip install --upgrade pip',
@@ -146,7 +159,7 @@ EOF`,
             <div>
               <h2 className="text-2xl font-black tracking-tight text-white">{tab.label}</h2>
               <p className="mt-2 max-w-3xl text-[12px] leading-6 text-white/55">
-                A-Evolve treats the workspace as the interface: the agent reads it, the evolver mutates it, and git gates every accepted change. This panel turns that contract into something you can bootstrap and inspect inside SYSTALOG.
+                A-Evolve now ships as a broader self-improvement framework: installable package, official seed workspaces, benchmark adapters, and new meta-harness paths. This panel keeps SYSTALOG aligned with that upstream contract instead of freezing an older snapshot.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -161,6 +174,12 @@ EOF`,
                 className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-[11px] font-semibold text-white/75"
               >
                 Open paper
+              </button>
+              <button
+                onClick={() => onOpenBrowserTab('https://github.com/A-EVO-Lab/a-evolve/blob/main/QUICKSTART.md', 'A-Evolve Quickstart', 'aevolve')}
+                className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-[11px] font-semibold text-white/75"
+              >
+                Open quickstart
               </button>
             </div>
           </div>
@@ -184,22 +203,24 @@ EOF`,
           <div className="grid grid-cols-2 gap-4">
             <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-5">
               <p className="text-[10px] uppercase tracking-[0.24em] text-[#c4b5fd] font-mono">Bootstrap</p>
-              <h3 className="mt-2 text-lg font-bold text-white">Install the framework and scaffold a workspace</h3>
+              <h3 className="mt-2 text-lg font-bold text-white">Pull latest upstream, then scaffold your workspace</h3>
               <p className="mt-2 text-[11px] leading-5 text-white/45">
-                A-Evolve requires Python 3.11+ and is best managed as a local repo plus virtualenv. This workflow keeps it separate from SYSTALOG while making the contract visible here.
+                Upstream now expects Python 3.11+ and a normal package install path. This workflow clones or updates the repo, syncs to the latest upstream commit, and installs the full local dev stack in an isolated virtualenv.
               </p>
               <div className="mt-4 space-y-3 rounded-[20px] border border-white/10 bg-[#020611]/40 p-4">
                 <p className="text-[10px] text-white/30 font-mono">Repo path</p>
                 <p className="text-[11px] text-white/65 font-mono break-all">{recommendedPaths.repo}</p>
                 <p className="mt-2 text-[10px] text-white/30 font-mono">Workspace root</p>
                 <p className="text-[11px] text-white/65 font-mono break-all">{recommendedPaths.workspaces}</p>
+                <p className="mt-2 text-[10px] text-white/30 font-mono">Latest upstream</p>
+                <p className="text-[11px] text-white/65 font-mono break-all">{statusMap.upstream?.value || 'checking'}</p>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
-                  onClick={() => onLaunchCommand('Bootstrap A-Evolve', bootstrapCommand, 'aevolve')}
+                  onClick={() => onLaunchCommand('Sync + Bootstrap A-Evolve', bootstrapCommand, 'aevolve')}
                   className="rounded-2xl bg-[linear-gradient(135deg,#8b5cf6,#6366f1)] px-4 py-3 text-[11px] font-semibold text-white"
                 >
-                  Bootstrap framework
+                  Sync and bootstrap
                 </button>
                 <button
                   onClick={() => onLaunchCommand('Scaffold A-Evolve Workspace', scaffoldCommand, 'aevolve')}
@@ -227,12 +248,12 @@ EOF`,
                 ))}
               </div>
               <p className="mt-4 text-[11px] leading-5 text-white/45">
-                Every accepted mutation should land in files you can open here: prompts, skills, memory, tools, and evolution logs. That makes the system auditable and lets SYSTALOG act as the control plane around the framework.
+                Every accepted mutation should land in files you can open here: prompts, skills, memory, tools, and evolution logs. That keeps the loop auditable, lets you inspect diffs in-app, and makes SYSTALOG the control plane instead of a detached launcher.
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-5">
               <p className="text-[10px] uppercase tracking-[0.24em] text-[#c4b5fd] font-mono">Workspace contract</p>
               <div className="mt-4 space-y-3">
@@ -261,6 +282,18 @@ EOF`,
               <p className="text-[10px] uppercase tracking-[0.24em] text-[#c4b5fd] font-mono">Adapters</p>
               <div className="mt-4 space-y-3">
                 {BENCHMARKS.map(([name, detail]) => (
+                  <div key={name} className="rounded-2xl border border-white/10 bg-[#020611]/40 p-4">
+                    <p className="text-[11px] font-bold text-white font-mono">{name}</p>
+                    <p className="mt-1 text-[11px] leading-5 text-white/45">{detail}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-5">
+              <p className="text-[10px] uppercase tracking-[0.24em] text-[#c4b5fd] font-mono">Seed workspaces</p>
+              <div className="mt-4 space-y-3">
+                {SEED_WORKSPACES.map(([name, detail]) => (
                   <div key={name} className="rounded-2xl border border-white/10 bg-[#020611]/40 p-4">
                     <p className="text-[11px] font-bold text-white font-mono">{name}</p>
                     <p className="mt-1 text-[11px] leading-5 text-white/45">{detail}</p>

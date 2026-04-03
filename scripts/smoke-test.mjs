@@ -20,14 +20,14 @@ try {
 
   await page.waitForSelector('text=SYSTALOG Terminal', { timeout: 15000 });
   await page.waitForSelector('text=AI Agent Command Center', { timeout: 15000 });
-  await page.waitForSelector('text=A-Evolve Lab', { timeout: 15000 });
+  await page.getByRole('button', { name: /A-Evolve Lab/i }).first().waitFor({ state: 'visible', timeout: 15000 });
 
   await page.getByRole('button', { name: /A-Evolve Lab/i }).first().click();
-  await page.waitForSelector('text=Bootstrap framework', { timeout: 15000 });
+  await page.waitForSelector('text=Sync and bootstrap', { timeout: 15000 });
   await page.waitForSelector('text=Workspace contract', { timeout: 15000 });
   await page.waitForSelector('text=Built-in algorithms', { timeout: 15000 });
 
-  await page.getByRole('button', { name: /Settings & API Keys/i }).click();
+  await page.getByRole('button', { name: /Settings, onboarding, and stack config/i }).click();
   await page.waitForSelector('text=Central control for models, capture, skills, and ops', { timeout: 15000 });
   await page.waitForSelector('text=OpenCode free models', { timeout: 15000 });
   await page.waitForSelector('text=Open lab', { timeout: 15000 });

@@ -38,6 +38,18 @@ interface OpenClawForm {
   primaryModel: string;
 }
 
+const CLAUDE_MODEL_OPTIONS = [
+  { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6' },
+  { value: 'claude-opus-4-6', label: 'Claude Opus 4.6' },
+  { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
+];
+
+const CODEX_MODEL_OPTIONS = [
+  { value: 'gpt-5.4', label: 'GPT-5.4' },
+  { value: 'gpt-5.3-codex', label: 'GPT-5.3 Codex' },
+  { value: 'gpt-5.3-codex-spark', label: 'GPT-5.3 Codex Spark' },
+];
+
 function providerStatusLabel(status: ProviderSetupStatus): string {
   switch (status.source) {
     case 'app-key':
@@ -285,8 +297,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     { family: 'Claude Code', note: 'Sonnet 4.6 and Opus 4.6 are the current Anthropic anchors.' },
     { family: 'Z.AI', note: 'This hub now keeps only GLM-5 Turbo and GLM-5.1 for the coding plan.' },
     { family: 'Ollama Cloud', note: 'The catalog now mirrors the live OpenCode + Ollama model list on this Mac instead of guessing at unsupported cloud codes.' },
+    { family: 'Codex', note: 'The launcher is now pinned to GPT-5.4, GPT-5.3 Codex, and GPT-5.3 Codex Spark instead of stale o-series entries.' },
     { family: 'OpenClaw', note: 'The hub now exposes setup, config, channels, and health-check entry points.' },
-    { family: 'A-Evolve', note: 'Use Evolution Lab to bootstrap the framework, inspect the workspace contract, and open evolution workspaces in-app.' },
+    { family: 'A-Evolve', note: 'Evolution Lab now tracks the upstream repo, seed workspaces, quickstart, and latest bootstrap flow for the framework.' },
   ];
 
   const filteredSkills = useMemo(() => {
@@ -600,9 +613,12 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                       <label className="block">
                         <span className="text-[10px] text-white/35">Default model</span>
                         <select value={claudeForm.model} onChange={(event) => setClaudeForm((state) => ({ ...state, model: event.target.value }))} className="mt-1 w-full rounded-2xl border border-white/10 bg-[#07111f] px-3 py-2 text-[11px] text-white">
-                          <option value="opus[1m]">Opus 1M</option>
-                          <option value="sonnet">Sonnet</option>
-                          <option value="haiku">Haiku</option>
+                          {!CLAUDE_MODEL_OPTIONS.some((option) => option.value === claudeForm.model) && claudeForm.model && (
+                            <option value={claudeForm.model}>Custom ({claudeForm.model})</option>
+                          )}
+                          {CLAUDE_MODEL_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
                         </select>
                       </label>
                       <label className="block">
@@ -639,7 +655,14 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     <div className="mt-4 space-y-3">
                       <label className="block">
                         <span className="text-[10px] text-white/35">Default model</span>
-                        <input value={codexForm.model} onChange={(event) => setCodexForm((state) => ({ ...state, model: event.target.value }))} className="mt-1 w-full rounded-2xl border border-white/10 bg-[#07111f] px-3 py-2 text-[11px] text-white" placeholder="gpt-5.4" />
+                        <select value={codexForm.model} onChange={(event) => setCodexForm((state) => ({ ...state, model: event.target.value }))} className="mt-1 w-full rounded-2xl border border-white/10 bg-[#07111f] px-3 py-2 text-[11px] text-white">
+                          {!CODEX_MODEL_OPTIONS.some((option) => option.value === codexForm.model) && codexForm.model && (
+                            <option value={codexForm.model}>Custom ({codexForm.model})</option>
+                          )}
+                          {CODEX_MODEL_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
+                        </select>
                       </label>
                       <label className="block">
                         <span className="text-[10px] text-white/35">Reasoning effort</span>

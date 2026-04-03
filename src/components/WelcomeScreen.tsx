@@ -8,8 +8,7 @@ interface WelcomeScreenProps {
   onLaunchShell: () => void;
 }
 
-// Show top picks — one per provider
-const TOP_PICKS = ['claude-sonnet-4.6', 'glm-5-turbo', 'ollama-minimax-m2.7', 'openclaw-dashboard', 'aevolve-lab'];
+const TOP_PICKS = ['claude-sonnet-4.6', 'glm-5-turbo', 'ollama-minimax-m2.7', 'codex-gpt-5.4', 'aevolve-lab'];
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ providers, models, onLaunchModel, onLaunchShell }) => {
   const topModels = TOP_PICKS.map((id) => models.find((m) => m.id === id)).filter(Boolean) as ModelOption[];
